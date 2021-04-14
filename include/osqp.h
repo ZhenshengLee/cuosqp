@@ -12,6 +12,7 @@ extern "C" {
 # include "csc_type.h"
 # include "osqp_api_utils.h"
 # include "osqp_api_functions.h"
+// # include "csc_utils.h"
 
 # ifdef __cplusplus
 }

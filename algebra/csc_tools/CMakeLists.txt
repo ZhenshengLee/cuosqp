@@ -16,4 +16,5 @@ endif()
 
 #pass upwards
 set(csc_tools ${csc_tools_src} ${csc_tools_headers} PARENT_SCOPE)
+set(csc_tools_headers "${csc_tools_headers}" PARENT_SCOPE)
 set(csc_tools_includes ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)

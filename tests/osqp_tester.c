@@ -13,15 +13,15 @@
 // Include tests
 #include "utils/c_test_utils.h" //helper functions
 #include "lin_alg/test_lin_alg.h"
-#include "solve_linsys/test_solve_linsys.h"
-#include "demo/test_demo.h"
-#include "basic_qp/test_basic_qp.h"
-#include "basic_qp2/test_basic_qp2.h"
-#include "non_cvx/test_non_cvx.h"
-#include "primal_dual_infeasibility/test_primal_dual_infeasibility.h"
-#include "primal_infeasibility/test_primal_infeasibility.h"
-#include "unconstrained/test_unconstrained.h"
-#include "update_matrices/test_update_matrices.h"
+// #include "solve_linsys/test_solve_linsys.h"
+// #include "demo/test_demo.h"
+// #include "basic_qp/test_basic_qp.h"
+// #include "basic_qp2/test_basic_qp2.h"
+// #include "non_cvx/test_non_cvx.h"
+// #include "primal_dual_infeasibility/test_primal_dual_infeasibility.h"
+// #include "primal_infeasibility/test_primal_infeasibility.h"
+// #include "unconstrained/test_unconstrained.h"
+// #include "update_matrices/test_update_matrices.h"
 
 
 int tests_run = 0;
@@ -29,15 +29,15 @@ int tests_run = 0;
 
 static const char* all_tests() {
   mu_run_test(test_lin_alg);
-  mu_run_test(test_solve_linsys);
-  mu_run_test(test_demo);
-  mu_run_test(test_basic_qp);
-  mu_run_test(test_basic_qp2);
-  mu_run_test(test_non_cvx);
-  mu_run_test(test_primal_infeasibility);
-  mu_run_test(test_primal_dual_infeasibility);
-  mu_run_test(test_unconstrained);
-  mu_run_test(test_update_matrices);
+  // mu_run_test(test_solve_linsys);
+  // mu_run_test(test_demo);
+  // mu_run_test(test_basic_qp);
+  // mu_run_test(test_basic_qp2);
+  // mu_run_test(test_non_cvx);
+  // mu_run_test(test_primal_infeasibility);
+  // mu_run_test(test_primal_dual_infeasibility);
+  // mu_run_test(test_unconstrained);
+  // mu_run_test(test_update_matrices);
   return 0;
 }
 

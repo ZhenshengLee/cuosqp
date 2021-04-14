@@ -44,6 +44,18 @@ if (CUDA_SUPPORT)
   # Pass upwards for accesibility from CUDA linear system solvers
   set(algebra_impl_includes "${algebra_impl_includes}" PARENT_SCOPE)
 
+  add_subdirectory(csc_tools)
+  add_library(osqp_csc_tools OBJECT ${csc_tools})
+  target_include_directories(osqp_csc_tools PRIVATE
+                             ${algebra_impl_includes}
+                             ${csc_tools_includes}
+                             ${osqp_api_includes})
+  #pass the csc tools include directory upwards
+  #for accessibility from linear solvers
+
+  set(csc_tools_includes "${csc_tools_includes}" PARENT_SCOPE)
+  set(csc_tools_headers "${csc_tools_headers}" PARENT_SCOPE)
+
 else()
 
   #include the csc_tools support directory

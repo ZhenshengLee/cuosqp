@@ -4,6 +4,8 @@ cmake_minimum_required (VERSION 3.2)
 # Project name
 project (osqp)
 
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
 # Export compile commands
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -117,12 +119,9 @@ if (CUDA_SUPPORT)
     include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
     # sm_75 -> Turing support
-    if (DFLOAT)
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --gpu-architecture=compute_52 --gpu-code=sm_52,sm_75")
-    else()
-        # To use doubles we need compute capability 6.0 for atomic operations
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --gpu-architecture=compute_60 --gpu-code=sm_60,sm_75")
-    endif()
+    include(CudaComputeTargetFlags)
+    set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
+    APPEND_TARGET_ARCH_FLAGS()
 endif()
 
 
@@ -202,7 +201,7 @@ set(osqp_api_includes ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 # Algebra implementation and CSC support
 # ----------------------------------------------
 add_subdirectory(algebra)
-set(osqp_objects $<TARGET_OBJECTS:osqp_algebra>)
+set(osqp_objects $<TARGET_OBJECTS:osqp_algebra> $<TARGET_OBJECTS:osqp_csc_tools>)
 
 
 # if we are building the Python interface, let's look for Python
@@ -303,7 +302,7 @@ endif (R_LANG)
 add_subdirectory(lin_sys)
 
 # Static library
-add_library (osqpstatic STATIC ${osqp_src} ${osqp_objects} ${osqp_headers} ${linsys_solvers})
+add_library (osqpstatic STATIC ${osqp_src} ${osqp_objects} ${osqp_headers} ${csc_tools_headers} ${linsys_solvers})
 
 # Give same name to static library output
 set_target_properties(osqpstatic PROPERTIES OUTPUT_NAME osqp)
@@ -336,7 +335,7 @@ install(TARGETS osqpstatic
 # ----------------------------------------------
 
 install(FILES ${osqp_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/osqp")
-
+install(FILES ${csc_tools_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/osqp")
 
 if (CUDA_SUPPORT)
     target_link_libraries (osqpstatic cublas cusparse)
@@ -371,7 +370,7 @@ if (NOT PYTHON AND NOT MATLAB AND NOT R_LANG AND NOT EMBEDDED)
         # Visual Studio needs the cuda libaries to be linked as well
         target_link_libraries (osqp cublas cusparse)
     endif (CUDA_SUPPORT AND MSVC)
-    
+
     # Install osqp shared library
     install(TARGETS osqp
             EXPORT  ${PROJECT_NAME}
@@ -382,6 +381,7 @@ if (NOT PYTHON AND NOT MATLAB AND NOT R_LANG AND NOT EMBEDDED)
     # Create demo executable (linked to static library)
     add_executable (osqp_demo ${PROJECT_SOURCE_DIR}/examples/osqp_demo.c)
     target_link_libraries (osqp_demo osqpstatic)
+    target_include_directories(osqp_demo PUBLIC ${csc_tools_includes})
 
 endif (NOT PYTHON AND NOT MATLAB AND NOT R_LANG AND NOT EMBEDDED)
 

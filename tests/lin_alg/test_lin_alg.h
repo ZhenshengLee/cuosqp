@@ -42,90 +42,148 @@ static const char* test_constr_sparse_mat() {
 
 #endif /* ifndef CUDA_SUPPORT */
 
-static const char* test_vec_operations() {
+// csc_tools tests
+#include "csc_utils.h"
 
-  c_float  scresult, scref;
-  OSQPVectorf *v1, *v2, *ref, *result;
+void mat_inf_norm_cols_sym_triu(const csc *M, c_float *E) {
+  c_int   i, j, ptr;
+  c_float abs_x;
+
+  // Initialize zero max elements
+  for (j = 0; j < M->n; j++) {
+    E[j] = 0.;
+  }
+
+  // Compute maximum across columns
+  // Note that element (i, j) contributes to
+  // -> Column j (as expected in any matrices)
+  // -> Column i (which is equal to row i for symmetric matrices)
+  for (j = 0; j < M->n; j++) {
+    for (ptr = M->p[j]; ptr < M->p[j + 1]; ptr++) {
+      i     = M->i[ptr];
+      abs_x = c_absval(M->x[ptr]);
+      E[j]  = c_max(abs_x, E[j]);
+
+      if (i != j) {
+        E[i] = c_max(abs_x, E[i]);
+      }
+    }
+  }
+}
+
+static const char* test_extract_upper_triangular() {
+  c_float *inf_norm_cols_test;
   lin_alg_sols_data *data = generate_problem_lin_alg_sols_data();
 
-  //allocate space for two vectors, results and reference results
-  //for each vector operations
-  v1     = OSQPVectorf_malloc(data->test_vec_ops_n);
-  v2     = OSQPVectorf_malloc(data->test_vec_ops_n);
-  ref    = OSQPVectorf_malloc(data->test_vec_ops_n);
-  result = OSQPVectorf_malloc(data->test_vec_ops_n);
+  // Extract upper triangular part
+  csc *Ptriu = csc_to_triu(data->test_mat_extr_triu_P);
 
-  //copy data vectors into OSQPVectors
-  OSQPVectorf_from_raw(v1, data->test_vec_ops_v1);
-  OSQPVectorf_from_raw(v2, data->test_vec_ops_v2);
+  mu_assert("Linear algebra tests: error in forming upper triangular matrix!",
+            csc_is_eq(data->test_mat_extr_triu_Pu, Ptriu, TESTS_TOL));
 
-
-  // scaled additions
-  //------------------
-  OSQPVectorf_add_scaled(result, data->test_vec_ops_sc1,v1,data->test_vec_ops_sc2,v2);
-  OSQPVectorf_from_raw(ref, data->test_vec_ops_add_scaled);
-
+  // Compute infinity norm over columns of the original matrix by using the
+  // upper triangular part only
+  inf_norm_cols_test = (c_float *)c_malloc(data->test_mat_extr_triu_n
+                                           * sizeof(c_float));
+  mat_inf_norm_cols_sym_triu(Ptriu, inf_norm_cols_test);
   mu_assert(
-    "Linear algebra tests: error in vector operation, adding scaled vector",
-    OSQPVectorf_norm_inf_diff(ref, result) < TESTS_TOL);
+    "Linear algebra tests: error in forming upper triangular matrix, infinity norm over columns",
+    vec_norm_inf_diff(inf_norm_cols_test,
+                      data->test_mat_extr_triu_P_inf_norm_cols,
+                      data->test_mat_extr_triu_n) < TESTS_TOL);
 
-  // Norm_inf of the difference
-  mu_assert(
-    "Linear algebra tests: error in vector operation, norm_inf of difference",
-    c_absval(OSQPVectorf_norm_inf_diff(v1,v2) - data->test_vec_ops_norm_inf_diff) < TESTS_TOL);
-
-  // norm_inf
-  scresult = OSQPVectorf_norm_inf(v1);
-  scref    = data->test_vec_ops_norm_inf;
-  mu_assert("Linear algebra tests: error in vector operation, norm_inf",
-            c_absval(scresult - scref) < TESTS_TOL);
-
-
-  // Elementwise reciprocal
-  //-----------------------
-
-  OSQPVectorf_ew_reciprocal(result, v1);
-  OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_reciprocal);
-
-  mu_assert(
-    "Linear algebra tests: error in vector operation, elementwise reciprocal",
-    OSQPVectorf_norm_inf_diff(ref, result) < TESTS_TOL);
-
-
-  // dot product reciprocal
-  //-----------------------
-  scresult = OSQPVectorf_dot_prod(v1,v2);
-  scref    = data->test_vec_ops_vec_prod;
-  mu_assert("Linear algebra tests: error in vector operation, vector product",
-            c_absval(scresult - scref) < TESTS_TOL);
-
-  // Elementwise maximum
-  //-----------------------
-  OSQPVectorf_ew_max_vec(result, v1, v2);
-  OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_max_vec);
-
-  mu_assert(
-    "Linear algebra tests: error in vector operation, elementwise maximum between vectors",
-    OSQPVectorf_norm_inf_diff(result, ref) < TESTS_TOL);
-
-  // Elementwise maximum
-  //-----------------------
-  OSQPVectorf_ew_min_vec(result, v1, v2);
-  OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_min_vec);
-
-  mu_assert(
-    "Linear algebra tests: error in vector operation, elementwise minimum between vectors",
-    OSQPVectorf_norm_inf_diff(result, ref) < TESTS_TOL);
-
-  // cleanup
-  OSQPVectorf_free(v1);
-  OSQPVectorf_free(v2);
-  OSQPVectorf_free(ref);
-  OSQPVectorf_free(result);
+  // Cleanup
+  c_free(inf_norm_cols_test);
+  csc_spfree(Ptriu);
   clean_problem_lin_alg_sols_data(data);
 
   return 0;
 }
+
+// static const char* test_vec_operations() {
+
+//   c_float  scresult, scref;
+//   OSQPVectorf *v1, *v2, *ref, *result;
+//   lin_alg_sols_data *data = generate_problem_lin_alg_sols_data();
+
+//   //allocate space for two vectors, results and reference results
+//   //for each vector operations
+//   v1     = OSQPVectorf_malloc(data->test_vec_ops_n);
+//   v2     = OSQPVectorf_malloc(data->test_vec_ops_n);
+//   ref    = OSQPVectorf_malloc(data->test_vec_ops_n);
+//   result = OSQPVectorf_malloc(data->test_vec_ops_n);
+
+//   //copy data vectors into OSQPVectors
+//   OSQPVectorf_from_raw(v1, data->test_vec_ops_v1);
+//   OSQPVectorf_from_raw(v2, data->test_vec_ops_v2);
+
+
+//   // scaled additions
+//   //------------------
+//   OSQPVectorf_add_scaled(result, data->test_vec_ops_sc1,v1,data->test_vec_ops_sc2,v2);
+//   OSQPVectorf_from_raw(ref, data->test_vec_ops_add_scaled);
+
+//   mu_assert(
+//     "Linear algebra tests: error in vector operation, adding scaled vector",
+//     OSQPVectorf_norm_inf_diff(ref, result) < TESTS_TOL);
+
+//   // Norm_inf of the difference
+//   mu_assert(
+//     "Linear algebra tests: error in vector operation, norm_inf of difference",
+//     c_absval(OSQPVectorf_norm_inf_diff(v1,v2) - data->test_vec_ops_norm_inf_diff) < TESTS_TOL);
+
+//   // norm_inf
+//   scresult = OSQPVectorf_norm_inf(v1);
+//   scref    = data->test_vec_ops_norm_inf;
+//   mu_assert("Linear algebra tests: error in vector operation, norm_inf",
+//             c_absval(scresult - scref) < TESTS_TOL);
+
+
+//   // Elementwise reciprocal
+//   //-----------------------
+
+//   OSQPVectorf_ew_reciprocal(result, v1);
+//   OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_reciprocal);
+
+//   mu_assert(
+//     "Linear algebra tests: error in vector operation, elementwise reciprocal",
+//     OSQPVectorf_norm_inf_diff(ref, result) < TESTS_TOL);
+
+
+//   // dot product reciprocal
+//   //-----------------------
+//   scresult = OSQPVectorf_dot_prod(v1,v2);
+//   scref    = data->test_vec_ops_vec_prod;
+//   mu_assert("Linear algebra tests: error in vector operation, vector product",
+//             c_absval(scresult - scref) < TESTS_TOL);
+
+//   // Elementwise maximum
+//   //-----------------------
+//   OSQPVectorf_ew_max_vec(result, v1, v2);
+//   OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_max_vec);
+
+//   mu_assert(
+//     "Linear algebra tests: error in vector operation, elementwise maximum between vectors",
+//     OSQPVectorf_norm_inf_diff(result, ref) < TESTS_TOL);
+
+//   // Elementwise maximum
+//   //-----------------------
+//   OSQPVectorf_ew_min_vec(result, v1, v2);
+//   OSQPVectorf_from_raw(ref, data->test_vec_ops_ew_min_vec);
+
+//   mu_assert(
+//     "Linear algebra tests: error in vector operation, elementwise minimum between vectors",
+//     OSQPVectorf_norm_inf_diff(result, ref) < TESTS_TOL);
+
+//   // cleanup
+//   OSQPVectorf_free(v1);
+//   OSQPVectorf_free(v2);
+//   OSQPVectorf_free(ref);
+//   OSQPVectorf_free(result);
+//   clean_problem_lin_alg_sols_data(data);
+
+//   return 0;
+// }
 
 static const char* test_mat_operations() {
 
@@ -313,10 +371,13 @@ static const char* test_lin_alg()
   mu_run_test(test_constr_sparse_mat);
 #endif
 
-  mu_run_test(test_vec_operations);
-  mu_run_test(test_mat_operations);
-  mu_run_test(test_mat_vec_multiplication);
-  mu_run_test(test_quad_form_upper_triang);
+  mu_run_test(test_extract_upper_triangular);
+
+//   mu_run_test(test_vec_operations);
+
+//   mu_run_test(test_mat_operations);
+//   mu_run_test(test_mat_vec_multiplication);
+//   mu_run_test(test_quad_form_upper_triang);
 
   // free algebra libraries
   osqp_algebra_free_libs();

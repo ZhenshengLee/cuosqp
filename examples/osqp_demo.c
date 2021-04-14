@@ -1,4 +1,5 @@
 #include "osqp.h"
+#include "csc_utils.h"
 #include <stdlib.h>
 
 int main(void) {
@@ -26,10 +27,13 @@ int main(void) {
   OSQPSettings *settings;
   csc *P = malloc(sizeof(csc));
   csc *A = malloc(sizeof(csc));
+  csc *Pu = malloc(sizeof(csc));
 
   /* Populate matrices */
   csc_set_data(A, m, n, A_nnz, A_x, A_i, A_p);
   csc_set_data(P, n, n, P_nnz, P_x, P_i, P_p);
+
+  Pu = csc_to_triu(P);
 
   /* Set default settings */
   settings = (OSQPSettings *)malloc(sizeof(OSQPSettings));
@@ -37,7 +41,7 @@ int main(void) {
   settings->polish = 1;
 
   /* Setup workspace */
-  exitflag = osqp_setup(&solver, P, q, A, l, u, m, n, settings);
+  exitflag = osqp_setup(&solver, Pu, q, A, l, u, m, n, settings);
 
   /* Solve Problem */
   osqp_solve(solver);
